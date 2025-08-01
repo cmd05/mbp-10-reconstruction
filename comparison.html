@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Comparison Tool</title>
+    <style>
+        body {
+            font-family: monospace;
+            font-size: 11px;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .file-inputs {
+            background-color: #ecf0f1;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .file-input-group {
+            margin-bottom: 10px;
+        }
+        .file-input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .file-input-group input[type="file"] {
+            padding: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 3px;
+            width: 300px;
+        }
+        .compare-btn {
+            background-color: #27ae60;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .compare-btn:hover {
+            background-color: #229954;
+        }
+        .compare-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .side-by-side {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .file-section {
+            flex: 1;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .file-header {
+            background-color: #34495e;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        .data-table th {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            padding: 6px 4px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-weight: bold;
+            border-bottom: 2px solid #bdc3c7;
+        }
+        .data-table td {
+            padding: 4px 6px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+            word-break: break-all;
+            max-width: 150px;
+        }
+        .data-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .data-table tr:hover {
+            background-color: #f0f0f0;
+        }
+        .line-number {
+            background-color: #ecf0f1;
+            font-weight: bold;
+            text-align: center;
+            min-width: 40px;
+            max-width: 40px;
+        }
+        .cell-same {
+            background-color: #e8f5e8 !important;
+            color: #2e7d32;
+        }
+        .cell-different {
+            background-color: #ffebee !important;
+            color: #c62828;
+            font-weight: bold;
+        }
+        .legend {
+            background-color: #ecf0f1;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-size: 11px;
+        }
+        .legend-item {
+            display: inline-block;
+            margin-right: 20px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 15px;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+        }
+        .stats {
+            background-color: #d4edda;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #dc3545;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .scroll-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>CSV Comparison Tool</h1>
+            <h2>Side-by-side comparison</h2>
+        </div>
+
+        <div class="file-inputs">
+            <div class="file-input-group">
+                <label for="file1">First CSV File:</label>
+                <input type="file" id="file1" accept=".csv" />
+            </div>
+            <div class="file-input-group">
+                <label for="file2">Second CSV File:</label>
+                <input type="file" id="file2" accept=".csv" />
+            </div>
+            <button class="compare-btn" id="compareBtn" onclick="compareFiles()">Compare Files</button>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #e8f5e8;"></span>
+                Same values (Green)
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #ffebee;"></span>
+                Different values (Red)
+            </div>
+        </div>
+
+        <div id="stats" class="stats" style="display: none;">
+            <h3>Comparison Statistics:</h3>
+            <div id="statsContent"></div>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="loading" class="loading" style="display: none;">
+            Loading and comparing files...
+        </div>
+
+        <div id="comparisonResults"></div>
+    </div>
+
+    <script>
+        function compareFiles() {
+            const file1 = document.getElementById('file1').files[0];
+            const file2 = document.getElementById('file2').files[0];
+            
+            if (!file1 || !file2) {
+                showError('Please select both files before comparing.');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('comparisonResults').innerHTML = '';
+
+            const reader1 = new FileReader();
+            const reader2 = new FileReader();
+
+            reader1.onload = function(e1) {
+                reader2.onload = function(e2) {
+                    try {
+                        const csv1 = e1.target.result;
+                        const csv2 = e2.target.result;
+                        
+                        const lines1 = csv1.split('\n').slice(0, 175);
+                        const lines2 = csv2.split('\n').slice(0, 175);
+                        
+                        const headers1 = lines1[0].split(',');
+                        const headers2 = lines2[0].split(',');
+                        
+                        // Find common columns
+                        const commonColumns = headers1.filter(col => headers2.includes(col));
+                        
+                        if (commonColumns.length === 0) {
+                            showError('No common columns found between the two files.');
+                            return;
+                        }
+
+                        displaySideBySideComparison(lines1, lines2, headers1, headers2, commonColumns);
+                        
+                    } catch (error) {
+                        showError('Error processing files: ' + error.message);
+                    }
+                    
+                    document.getElementById('loading').style.display = 'none';
+                };
+                
+                reader2.readAsText(file2);
+            };
+            
+            reader1.readAsText(file1);
+        }
+
+        function displaySideBySideComparison(lines1, lines2, headers1, headers2, commonColumns) {
+            const resultsDiv = document.getElementById('comparisonResults');
+            const statsDiv = document.getElementById('stats');
+            const statsContent = document.getElementById('statsContent');
+            
+            let totalComparisons = 0;
+            let matchingComparisons = 0;
+
+            // Create side-by-side layout
+            let html = `
+                <div class="side-by-side">
+                    <div class="file-section">
+                        <div class="file-header">File 1: ${document.getElementById('file1').files[0].name}</div>
+                        <div class="scroll-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th class="line-number">Line</th>
+            `;
+            
+            // Add headers for file 1
+            commonColumns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            
+            html += `
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            // Add data rows for file 1
+            for (let lineNum = 0; lineNum < Math.min(lines1.length, lines2.length); lineNum++) {
+                const line1 = lines1[lineNum];
+                const line2 = lines2[lineNum];
+                
+                if (!line1 || !line2) continue;
+                
+                const values1 = parseCSVLine(line1);
+                const values2 = parseCSVLine(line2);
+                
+                html += `<tr><td class="line-number">${lineNum + 1}</td>`;
+                
+                commonColumns.forEach(col => {
+                    const colIndex1 = headers1.indexOf(col);
+                    const colIndex2 = headers2.indexOf(col);
+                    
+                    if (colIndex1 >= 0 && colIndex2 >= 0) {
+                        const value1 = values1[colIndex1] || '';
+                        const value2 = values2[colIndex2] || '';
+                        const isSame = value1 === value2;
+                        
+                        const cellClass = isSame ? 'cell-same' : 'cell-different';
+                        html += `<td class="${cellClass}">${escapeHtml(value1)}</td>`;
+                        
+                        totalComparisons++;
+                        if (isSame) matchingComparisons++;
+                    }
+                });
+                
+                html += `</tr>`;
+            }
+            
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="file-section">
+                    <div class="file-header">File 2: ${document.getElementById('file2').files[0].name}</div>
+                    <div class="scroll-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="line-number">Line</th>
+            `;
+            
+            // Add headers for file 2
+            commonColumns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            
+            html += `
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            // Add data rows for file 2
+            for (let lineNum = 0; lineNum < Math.min(lines1.length, lines2.length); lineNum++) {
+                const line1 = lines1[lineNum];
+                const line2 = lines2[lineNum];
+                
+                if (!line1 || !line2) continue;
+                
+                const values1 = parseCSVLine(line1);
+                const values2 = parseCSVLine(line2);
+                
+                html += `<tr><td class="line-number">${lineNum + 1}</td>`;
+                
+                commonColumns.forEach(col => {
+                    const colIndex1 = headers1.indexOf(col);
+                    const colIndex2 = headers2.indexOf(col);
+                    
+                    if (colIndex1 >= 0 && colIndex2 >= 0) {
+                        const value1 = values1[colIndex1] || '';
+                        const value2 = values2[colIndex2] || '';
+                        const isSame = value1 === value2;
+                        
+                        const cellClass = isSame ? 'cell-same' : 'cell-different';
+                        html += `<td class="${cellClass}">${escapeHtml(value2)}</td>`;
+                    }
+                });
+                
+                html += `</tr>`;
+            }
+            
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            `;
+            
+            resultsDiv.innerHTML = html;
+            
+            // Update statistics
+            const matchPercentage = totalComparisons > 0 ? ((matchingComparisons / totalComparisons) * 100).toFixed(2) : 0;
+            statsContent.innerHTML = `
+                <p><strong>Total comparisons:</strong> ${totalComparisons}</p>
+                <p><strong>Matching values:</strong> ${matchingComparisons}</p>
+                <p><strong>Different values:</strong> ${totalComparisons - matchingComparisons}</p>
+                <p><strong>Match percentage:</strong> ${matchPercentage}%</p>
+            `;
+            statsDiv.style.display = 'block';
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current);
+            return result;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Enable/disable compare button based on file selection
+        document.getElementById('file1').addEventListener('change', updateCompareButton);
+        document.getElementById('file2').addEventListener('change', updateCompareButton);
+
+        function updateCompareButton() {
+            const file1 = document.getElementById('file1').files[0];
+            const file2 = document.getElementById('file2').files[0];
+            const compareBtn = document.getElementById('compareBtn');
+            
+            compareBtn.disabled = !(file1 && file2);
+        }
+    </script>
+</body>
+</html> 
